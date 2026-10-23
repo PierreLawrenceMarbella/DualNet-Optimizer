@@ -25,6 +25,7 @@ class BondingVpnService : VpnService() {
     private val graph get() = (application as DualNetApplication).graph
     private var tun: ParcelFileDescriptor? = null
     private val paths = ConcurrentHashMap<String, TlsPath>()
+    private val sockets = SocketRegistry()
     private val pending = ConcurrentHashMap<String, Job>()
     private var started = false
     private val writeLock = Any()
@@ -57,7 +58,7 @@ class BondingVpnService : VpnService() {
                         pending[label] = scope.launch {
                             var path: TlsPath? = null
                             try {
-                                path = TlsPath.open(this@BondingVpnService, network, label, config, sessionId)
+                                path = TlsPath.open(this@BondingVpnService, network, label, config, sessionId, sockets)
                                 paths[label] = path
                                 path.pump { packet ->
                                     val descriptor = tun?.fileDescriptor
@@ -117,6 +118,7 @@ class BondingVpnService : VpnService() {
     }
     override fun onRevoke() { stopSelf(); super.onRevoke() }
     override fun onDestroy() {
+        sockets.close()
         paths.values.forEach { it.close() }; paths.clear()
         runCatching { tun?.close() }; tun = null; scope.cancel()
         graph.networks.releaseCellular()

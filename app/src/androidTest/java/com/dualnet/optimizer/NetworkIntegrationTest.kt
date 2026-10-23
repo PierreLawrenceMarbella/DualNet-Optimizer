@@ -8,8 +8,10 @@ import com.dualnet.optimizer.services.MonitorService
 import com.dualnet.optimizer.vpn.BondingVpnService
 import com.dualnet.optimizer.data.*
 import com.dualnet.optimizer.network.MeasurementClient
+import com.dualnet.optimizer.network.ConnectionController
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,6 +57,24 @@ class NetworkIntegrationTest {
         if (!repository.hasAccess()) { assertNull(state.wifi); assertNull(state.mobile); assertNotNull(state.message) }
         else { assertTrue(state.wifi != null || state.mobile != null); assertNotNull(state.message) }
     }
+    @Test fun emulatorUsageAccessGrantAndRevocation(): Unit = runBlocking {
+        org.junit.Assume.assumeTrue("Usage permission changes are restricted to an emulator", android.os.Build.MODEL.contains("sdk_gphone"))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        fun shell(command: String): String = android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).bufferedReader().use { it.readText() }
+        val previous = Regex("GET_USAGE_STATS: (allow|ignore|deny|default)").find(shell("appops get ${app.packageName} GET_USAGE_STATS"))?.groupValues?.get(1) ?: "default"
+        try {
+            shell("appops set ${app.packageName} GET_USAGE_STATS allow")
+            assertTrue(app.graph.usage.hasAccess())
+            val granted = app.graph.usage.load(UsagePeriod.TODAY)
+            assertTrue("The emulator must expose at least one measured transport total", granted.wifi != null || granted.mobile != null)
+            listOfNotNull(granted.wifi, granted.mobile).forEach { assertTrue(it >= 0) }
+            assertTrue(granted.apps.all { it.bytes > 0 })
+            shell("appops set ${app.packageName} GET_USAGE_STATS ignore")
+            assertFalse(app.graph.usage.hasAccess())
+            val revoked = app.graph.usage.load(UsagePeriod.TODAY)
+            assertNull(revoked.wifi); assertNull(revoked.mobile); assertTrue(revoked.apps.isEmpty()); assertNotNull(revoked.message)
+        } finally { shell("appops set ${app.packageName} GET_USAGE_STATS $previous") }
+    }
     @Test fun foregroundSelectionStartsAndStops(): Unit = runBlocking {
         val original = app.graph.preferences.preferences.first()
         ActivityScenario.launch(MainActivity::class.java).use {
@@ -70,6 +90,21 @@ class NetworkIntegrationTest {
             } finally { app.stopService(Intent(app, MonitorService::class.java)); app.graph.preferences.mode(original.mode) }
         }
     }
+    @Test fun savedModeOverridesInitialPreferencePlaceholder(): Unit = runBlocking {
+        val testScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val placeholder = MutableStateFlow(Preferences(mode = ConnectionMode.SMART))
+        val controller = ConnectionController(app.graph.networks, placeholder, testScope)
+        try {
+            withTimeout(20000) { app.graph.networks.state.first { it.wifi.validated } }
+            withContext(Dispatchers.Main) { controller.start(ConnectionMode.WIFI) }
+            val selected = withTimeout(10000) { controller.session.first { it.active } }
+            assertEquals("Wi-Fi", selected.preferred)
+            assertTrue(selected.detail.startsWith("Wi-Fi Only"))
+            assertFalse("Wi-Fi-only startup must not start Smart Mode probes", controller.diagnostics.value.running)
+            assertNull(controller.diagnostics.value.wifi)
+            assertNull(controller.diagnostics.value.mobile)
+        } finally { withContext(Dispatchers.Main) { controller.stop(); testScope.cancel() } }
+    }
     @Test fun missingGatewayCannotActivateVpn(): Unit = runBlocking {
         val original = app.graph.preferences.preferences.first()
         ActivityScenario.launch(MainActivity::class.java).use {
@@ -82,6 +117,35 @@ class NetworkIntegrationTest {
             } finally {
                 app.stopService(Intent(app, BondingVpnService::class.java))
                 app.graph.preferences.gateway(original.serverHost, original.serverPort, original.token, original.mtu, original.probeInterval)
+            }
+        }
+    }
+    @Test fun emulatorOfflineConnectionRecoversWithoutInventedStatus(): Unit = runBlocking {
+        org.junit.Assume.assumeTrue("Radio-switch test is restricted to an emulator", android.os.Build.MODEL.contains("sdk_gphone"))
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        fun shell(command: String): String = android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).bufferedReader().use { it.readText() }
+        val original = app.graph.preferences.preferences.first()
+        val mobileWasEnabled = shell("settings get global mobile_data").trim() == "1"
+        ActivityScenario.launch(MainActivity::class.java).use {
+            try {
+                app.graph.preferences.mode(ConnectionMode.WIFI)
+                app.graph.settings.first { it.mode == ConnectionMode.WIFI }
+                withTimeout(20000) { app.graph.networks.state.first { it.wifi.validated } }
+                app.startForegroundService(Intent(app, MonitorService::class.java))
+                withTimeout(15000) { app.graph.controller.session.first { it.active } }
+                shell("svc wifi disable"); shell("svc data disable")
+                withTimeout(20000) { app.graph.networks.state.first { !it.wifi.validated && !it.mobile.validated } }
+                val offline = withTimeout(15000) { app.graph.controller.session.first { !it.active && it.connecting } }
+                assertEquals("—", offline.preferred)
+                shell("svc wifi enable")
+                withTimeout(45000) { app.graph.networks.state.first { it.wifi.validated } }
+                val restored = withTimeout(15000) { app.graph.controller.session.first { it.active } }
+                assertEquals("Wi-Fi", restored.preferred); assertFalse(restored.vpn)
+            } finally {
+                shell("svc wifi enable")
+                shell(if (mobileWasEnabled) "svc data enable" else "svc data disable")
+                app.stopService(Intent(app, MonitorService::class.java))
+                app.graph.preferences.mode(original.mode)
             }
         }
     }

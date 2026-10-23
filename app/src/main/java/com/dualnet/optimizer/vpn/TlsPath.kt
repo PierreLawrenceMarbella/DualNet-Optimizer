@@ -11,7 +11,7 @@ import java.net.*
 import javax.net.ssl.*
 
 /** TLS uses the platform trust store AND HTTPS hostname validation. Never accepts arbitrary certificates. */
-class TlsPath private constructor(val network: Network, val label: String, private val socket: SSLSocket) : Closeable {
+class TlsPath private constructor(val network: Network, val label: String, private val socket: SSLSocket, private val raw: Socket, private val registry: SocketRegistry) : Closeable {
     val outgoing = Channel<ByteArray>(256)
     private val input = DataInputStream(BufferedInputStream(socket.inputStream))
     private val output = DataOutputStream(BufferedOutputStream(socket.outputStream))
@@ -25,11 +25,12 @@ class TlsPath private constructor(val network: Network, val label: String, priva
             }
         }
     }
-    override fun close() { outgoing.close(); runCatching { socket.close() } }
+    override fun close() { outgoing.close(); runCatching { socket.close() }; runCatching { raw.close() }; registry.release(raw) }
     companion object {
-        suspend fun open(vpn: VpnService, network: Network, label: String, preferences: Preferences, session: String): TlsPath = withContext(Dispatchers.IO) {
+        suspend fun open(vpn: VpnService, network: Network, label: String, preferences: Preferences, session: String, registry: SocketRegistry): TlsPath = withContext(Dispatchers.IO) {
             val raw = Socket()
             try {
+                registry.register(raw)
                 check(vpn.protect(raw)) { "Unable to protect tunnel socket" }
                 network.bindSocket(raw)
                 raw.tcpNoDelay = true; raw.soTimeout = 15000
@@ -44,9 +45,10 @@ class TlsPath private constructor(val network: Network, val label: String, priva
                     FrameCodec.write(DataOutputStream(tls.outputStream), hello)
                     val response = JSONObject(FrameCodec.read(DataInputStream(tls.inputStream), FrameCodec.MAX_HANDSHAKE).toString(Charsets.UTF_8))
                     check(response.optBoolean("ok") && response.optString("protocol") == "DN1" && response.optString("address") == "10.77.0.2") { "Gateway authentication or protocol negotiation failed" }
-                    TlsPath(network, label, tls)
+                    currentCoroutineContext().ensureActive()
+                    TlsPath(network, label, tls, raw, registry)
                 } catch (e: Exception) { tls.close(); throw e }
-            } catch (e: Exception) { raw.close(); throw e }
+            } catch (e: Exception) { raw.close(); registry.release(raw); throw e }
         }
     }
 }

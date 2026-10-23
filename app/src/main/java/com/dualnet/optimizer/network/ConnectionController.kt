@@ -14,15 +14,14 @@ class ConnectionController(private val monitor: NetworkMonitor, private val pref
         private set
     private var loop: Job? = null
     private val probes = MeasurementClient()
-    fun start() {
+    fun start(mode: ConnectionMode) {
         stop()
-        if (preferences.value.mode == ConnectionMode.DUAL) return
-        if (preferences.value.mode != ConnectionMode.WIFI) monitor.requestCellular()
+        if (mode == ConnectionMode.DUAL) return
+        if (mode != ConnectionMode.WIFI) monitor.requestCellular()
         session.value = SessionState(connecting = true, detail = "Checking available connections…")
         loop = scope.launch {
             var lastProbe = 0L
             while (isActive) {
-                val mode = preferences.value.mode
                 val snapshot = monitor.state.value
                 val wifi = snapshot.wifi.takeIf { it.validated }?.network
                 val cell = snapshot.mobile.takeIf { it.validated }?.network

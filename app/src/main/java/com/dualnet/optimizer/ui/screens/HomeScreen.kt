@@ -41,7 +41,7 @@ fun HomeScreen(networks: NetworkSnapshot, traffic: TrafficState, session: Sessio
             GlowIcon(Icons.Outlined.Link, Green)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(if (mode == ConnectionMode.DUAL) "Bonding Mode" else mode.title, style = MaterialTheme.typography.titleMedium)
-                Text(when { session.vpn && session.paths == 2 -> "Using Wi-Fi + Mobile Data together"; session.vpn -> "One path • reconnecting second network"; mode == ConnectionMode.DUAL -> "Gateway setup required"; else -> "App traffic • ${session.preferred}" }, color = Muted, fontSize = 12.sp)
+                Text(when { session.vpn && session.paths == 2 -> "Using Wi-Fi + Mobile Data together"; session.vpn && session.paths == 1 -> "One path • reconnecting second network"; session.vpn -> "Connecting to encrypted gateway"; mode == ConnectionMode.DUAL -> "Encrypted connection requires a gateway"; else -> "App traffic • ${session.preferred}" }, color = Muted, fontSize = 12.sp)
             }
             Icon(Icons.Outlined.ChevronRight, "Connection Mode", tint = Muted, modifier = Modifier.size(20.dp))
         }
