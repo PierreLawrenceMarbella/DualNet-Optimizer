@@ -44,7 +44,7 @@ The app protects each socket from its own VPN, binds it to the Wi-Fi or cellular
 
 Network Booster can send ten authenticated UDP diagnostics per available connection. A 60-byte probe contains `DNP1`, an eight-byte network-order timestamp in milliseconds, a 16-byte random nonce, and a 32-byte HMAC-SHA256 over those first 28 bytes using the token. The server accepts timestamps within 30 seconds and echoes identical bytes, capped at 100 packets/second. It never sends the token or carries application payloads over this UDP port. The app counts matching replies with an 800 ms timeout and reports round-trip packet loss. A blocked UDP port, wrong token, or inaccurate clock can appear as 100% loss. The UDP diagnostic endpoint is separate from the TLS VPN transport.
 
-- This implements actual IP forwarding across both networks, including TCP and UDP application traffic. It is **not MPTCP, QUIC, or a production-grade congestion controller**.
+- The client and gateway are designed to forward IPv4 TCP and UDP application packets across authenticated paths; deployment and physical dual-radio behavior still need end-to-end validation. It is **not MPTCP, QUIC, or a production-grade congestion controller**.
 - Independent TCP paths can reorder IP packets and introduce TCP-over-TCP head-of-line blocking. Throughput can be worse than a single connection; gaming ping can increase. There is no bandwidth or latency guarantee.
 - Full queues drop packets. Standard TCP applications retransmit; UDP applications may lose datagrams during path failure. There is no FEC, UDP relay, multipath congestion estimation, or seamless session migration after process death.
 - IPv4 only. Applications requiring IPv6-only destinations are unsupported through this gateway. DNS travels inside TLS to the gateway, then uses the configured resolver; it is not end-to-end DoH.
@@ -59,4 +59,4 @@ cd gateway
 python -m unittest discover -p 'test_*.py' -v
 ```
 
-Protocol tests run on Windows or Linux with an in-memory packet sink. They exercise framing, authentication, packet validation, two-path forwarding, queue pressure, and fallback. They do not validate Linux NAT, a public certificate deployment, or physical Wi-Fi plus cellular radios. See `../docs/VALIDATION.md` for the actual verification record.
+Protocol tests run on Windows or Linux with an in-memory packet sink. They exercise framing, authentication, packet validation, two-path forwarding, queue pressure, and fallback. They do not validate Linux NAT, a public certificate deployment, or physical Wi-Fi plus cellular radios.

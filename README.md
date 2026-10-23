@@ -2,7 +2,7 @@
 
 Native Android application built with Kotlin, Jetpack Compose, Material 3, MVVM, StateFlow, Coroutines, and DataStore. The seven main screens follow the supplied dark navy, electric blue, and neon green reference. All runtime network values come from Android or actual requests; missing measurements are shown as unavailable.
 
-## Open and build
+## Requirements and build
 
 Open this folder in Android Studio. Use **JDK 17** for Gradle (Settings → Build Tools → Gradle → Gradle JDK), install Android SDK Platform 36 and Build Tools 36.1.0, and let Gradle sync. The project pins AGP 8.13.2, Gradle 8.13, Kotlin 2.2.21, and Compose BOM 2025.10.01. Android 8.0/API 26 or later is supported; API 31+ supplies live interface counters.
 
@@ -14,13 +14,13 @@ $env:JAVA_HOME = 'C:\path\to\jdk-17'
 
 On macOS/Linux, use `chmod +x gradlew` and `./gradlew` instead. Android Studio writes your machine-specific `local.properties`; it is excluded from source control.
 
-APK output: `app/build/outputs/apk/debug/app-debug.apk`. A delivery copy is in `artifacts/DualNet-Optimizer-1.0.0-debug.apk` after the verified build. This is a debug-signed development APK, not a Play Store release.
+APK output: `app/build/outputs/apk/debug/app-debug.apk`. To validate and create the delivery copy at `artifacts/DualNet-Optimizer-1.0.0-debug.apk`, run `./scripts/build.ps1 -JdkPath C:\path\to\jdk-17` in PowerShell. This is a debug-signed development APK, not a Play Store release.
 
 ## Install on Xiaomi 12T
 
 1. Enable Developer options by tapping the OS/MIUI version repeatedly in Settings → About phone. Enable USB debugging in Developer options; Xiaomi may also require “Install via USB.” Menu names vary by MIUI/HyperOS release.
 2. Connect the phone by USB and accept its debugging prompt. Run `adb devices`; the phone should be listed as `device`.
-3. Run `adb install -r artifacts/DualNet-Optimizer-1.0.0-debug.apk`, or select the Xiaomi device in Android Studio and press Run. You can also copy the APK to the phone and permit installation from your file manager.
+3. Run `adb install -r app/build/outputs/apk/debug/app-debug.apk`, or select the Xiaomi device in Android Studio and press Run. You can also copy the APK to the phone and permit installation from your file manager.
 4. Start with Smart Mode. Enable Wi-Fi/mobile data in Android. Tap the power ring to start app-scoped selection. The ongoing notification keeps this user-requested session visible.
 5. Open Network Status → Allow network details for optional SSID and phone details. Enable Location if Android hides the SSID. Open Usage → Open usage access to allow device/app usage statistics.
 6. For dependable background operation, review the app's battery/autostart settings on your phone. Android/OEM restrictions can still stop services. Test actual reconnect behavior before relying on it.
@@ -35,7 +35,7 @@ The Xiaomi 12T was not physically attached during development. Emulator verifica
 | Home / live graphs | Android callbacks and per-interface RX/TX deltas on API 31+. Interface counters are estimates and may omit adjustments. No total-minus-cellular inference is used. |
 | Smart Mode | HTTPS probes with a 20% switching margin select Wi-Fi/cellular for DualNet requests. Other apps retain Android routing. |
 | Wi-Fi / Mobile Only | DualNet requests bind to the selected network. These modes do not globally force other applications onto a radio. |
-| Dual Network | Experimental encrypted IPv4 TUN forwarding across two independently bound TLS paths to the bundled DN1 gateway. Requires configured server; never claims bonding without two authenticated paths. |
+| Dual Network | Experimental IPv4 VPN client and matching DN1 gateway use two separately bound TLS paths when available. A configured server is required. The Android VPN-to-public-gateway path and physical dual-radio bonding have not been verified end to end; the UI reports the actual authenticated path count. |
 | Usage | `NetworkStatsManager` with special Usage access. Android can delay accounting, restrict totals, or expose only shared UID attribution. |
 | Status | Available IP, gateway, DNS, SSID, signal and technology. Unknown values stay unknown; 5G NSA may be reported as LTE by Android. |
 | Speed Test | Five HTTPS response-time probes, 12 MB download and 12 MB upload against Cloudflare. Wi-Fi, mobile, selected/system network, or active two-path VPN. Results are application-level throughput. |
@@ -82,7 +82,7 @@ gateway/            Python gateway, systemd example, setup script, tests
 
 ## Verification
 
-See [docs/VALIDATION.md](docs/VALIDATION.md) for completed checks and outstanding device/server acceptance tests. No development phase is represented as fully verified where hardware or a deployed gateway is still required.
+The debug APK and unit, gateway, and Android emulator tests have passed. The emulator does not validate physical dual-radio aggregation, Linux NAT deployment, or Xiaomi 12T battery and carrier behavior.
 
 ```powershell
 .\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest
