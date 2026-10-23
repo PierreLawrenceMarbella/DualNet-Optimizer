@@ -9,7 +9,7 @@ Continue the existing native Android project in this folder. Do not restart, red
 5. Before committing/pushing, scan staged files for secrets, exclude local paths/caches/APKs/logs/private keys, verify the exact repository destination and remote history, and avoid force pushes. If no remote is configured, ask for the intended URL while continuing local work. Do not invent a repository or claim a push happened.
 6. Update `PROJECT_PROGRESS.md` and this file after significant milestones. Record exact test results and outstanding limitations. Do not mark phases complete without verification.
 
-Last checkpoint: debug APK builds/installs; 9 JVM, 12 Python, and 7 Android tests passed. Real HTTPS speed transfer succeeded. Screenshot test timing has been corrected and needs a rerun. There is no physical Xiaomi 12T or deployed public TLS gateway available in the recorded session. No Git remote was present when the continuation request arrived; the user was asked for its URL.
+Last checkpoint: debug APK builds/installs; 9 JVM, 12 Python, and 7 Android tests passed. Real HTTPS speed transfer succeeded. Screenshot test timing has been corrected and needs a rerun. There is no physical Xiaomi 12T or deployed public TLS gateway available in the recorded session. The user confirmed `https://github.com/PierreLawrenceMarbella/DualNet-Optimizer.git`; `origin` points there and was initially empty. Source checkpoint: `e3544df`. Verify push results and tracking status rather than assuming synchronization. The emulator stopped between sessions and may need restarting.
 
 Useful commands (PowerShell):
 

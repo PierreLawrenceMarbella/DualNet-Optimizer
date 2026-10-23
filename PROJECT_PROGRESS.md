@@ -8,7 +8,7 @@ Updated: 2026-10-23 (Asia/Manila). Continue this implementation; do not recreate
 - Debug APK built and installed on the Android 16.1 emulator. Last build and lint invocation succeeded.
 - 9 JVM unit tests, 12 Python gateway/protocol/TLS/UDP tests, and 7 Android instrumentation tests passed.
 - The instrumented speed test transferred actual data through Cloudflare: approximately 122 ms HTTPS response time, 11.0 Mbps download and 9.5 Mbps upload in that run. These are emulator observations, not product performance promises.
-- Git is initialized on `main`; no remote is configured. The intended GitHub URL has been requested. A push must wait for a verified destination.
+- Source checkpoint committed as `e3544df`. The user confirmed `https://github.com/PierreLawrenceMarbella/DualNet-Optimizer.git`; it is configured as `origin` and inspection found no existing remote branches. First push is being performed; verify its result before claiming synchronization.
 
 ## Implemented
 
@@ -37,7 +37,7 @@ Updated: 2026-10-23 (Asia/Manila). Continue this implementation; do not recreate
 4. Review VPN lifecycle/resource cleanup and add meaningful regression coverage for defects found.
 5. Verify the actual Android TUN → public TLS gateway → Linux NAT → internet path, both physical radios, path failure/recovery, app routing, DNS, and UDP diagnostics end to end. A deployed gateway with a valid public certificate and a real Android device are still required. Local protocol tests do not establish those results.
 6. Xiaomi 12T acceptance: installation, MIUI/HyperOS battery/autostart behavior, cellular/5G reporting, reboot, always-on/lockdown, gaming/streaming, and real performance remain unverified.
-7. Configure the user-provided GitHub remote, inspect its refs/history, and push commits without overwriting remote work.
+7. Push verified milestones to the confirmed `origin` repository, preserving remote history and recording the result.
 
 ## Phase status
 
