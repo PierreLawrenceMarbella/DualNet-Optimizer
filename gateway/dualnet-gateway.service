@@ -1,0 +1,23 @@
+[Unit]
+Description=DualNet experimental multipath gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dualnet
+Group=dualnet
+WorkingDirectory=/opt/dualnet
+EnvironmentFile=/etc/dualnet/gateway.env
+ExecStart=/usr/bin/python3 /opt/dualnet/gateway.py --cert /etc/dualnet/fullchain.pem --key /etc/dualnet/privkey.pem
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

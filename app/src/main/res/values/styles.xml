@@ -1,0 +1,11 @@
+<resources>
+    <style name="Base.Theme.DualNet" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#030B18</item>
+        <item name="android:navigationBarColor">#030B18</item>
+        <item name="android:windowBackground">#030B18</item>
+        <item name="android:colorAccent">#2679FF</item>
+    </style>
+    <style name="Theme.DualNet" parent="Base.Theme.DualNet" />
+</resources>

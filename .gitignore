@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+.vscode/
+.kotlin/
+artifacts/
+local.properties
+**/build/
+*.iml
+*.jks
+*.keystore
+*.hprof
+__pycache__/
+.venv/
+gateway/.env
+gateway/*.pem
